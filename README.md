@@ -13,6 +13,8 @@ Scrapes <https://webscraper.io/test-sites/e-commerce/static> and prints one JSON
 ```
 
 - Every product is collected: 147 products across laptops, tablets and phones, giving 423 results.
+  Products are de-duplicated by URL, so one that appears in more than one place (for example the
+  featured items on the home and category pages) is fetched and counted once.
 - A product with several in-stock HDD sizes becomes one result per size, with the size in the name
   (`Packard 255 G2 128 GB`, `... 256 GB`, ...).
 - `colors` is only present when there are two or more colour options.
@@ -83,6 +85,11 @@ pip install . && pip freeze --exclude scraper > requirements.lock
 | `variants.py` | Expands a product into one result per in-stock HDD size |
 | `models.py` | `RawProduct` (as scraped) and `Product` (as output) |
 | `cli.py` | Argument parsing, JSON output, exit code |
+
+**De-duplication.** Products are discovered from subcategory listings, never from the featured items
+on the home or category pages. The crawler also tracks every product URL it has seen and skips
+repeats, so a product linked from several pages is fetched once and cannot inflate `total`. Two
+different products that share a name are not duplicates: each has its own URL and is kept.
 
 **Pagination.** The pager shows only a window of pages (`2..10 ... 19 20`) but always links the
 last one. The page count is read from page 1 and every other page is fetched in parallel, rather
