@@ -125,5 +125,8 @@ HTTP/2 multiplexing has no such cliff.
   (`Disallow: /x*?page=`) and non-integer `Crawl-delay` values. None of the current rules for this
   site depend on either; a stricter parser would be needed for a site that does.
 - Rate limiting is the concurrency cap plus `Crawl-delay`; there is no per-second request budget.
+- The contract test (`pytest -m contract`) is run by hand. Before productionizing, run it as a
+  recurring CI job (for example weekly, plus on every release) so a change to the site's HDD
+  pricing is caught before it reaches production data.
 - If the site ever rendered prices client-side, the fallback would be Playwright for the product
   stage; the parser and variant layers would not change.
