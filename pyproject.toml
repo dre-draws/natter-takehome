@@ -20,6 +20,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["tests"]
 addopts = "-m 'not contract'"
 markers = ["contract: hits the live site with a real browser (run with `pytest -m contract`)"]
 

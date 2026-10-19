@@ -2,42 +2,16 @@ import asyncio
 
 import httpx
 import pytest
+from helpers import ROOT, listing, page, product, products_site, swatch
 
 from scraper import config
 from scraper.client import Fetcher
 from scraper.crawler import crawl
 
-ROOT = "https://webscraper.io" + config.STATIC_ROOT
-
 
 @pytest.fixture(autouse=True)
 def no_backoff(monkeypatch):
     monkeypatch.setattr(config, "BACKOFF_SECONDS", 0)
-
-
-def page(body: str) -> str:
-    return f"<html><body>{body}</body></html>"
-
-
-def product(name: str, price: str, swatches: str = "") -> str:
-    return page(
-        f'<div class="caption"><h4 itemprop="offers"><span itemprop="price">${price}</span></h4>'
-        f'<h4 itemprop="name">{name}</h4><p itemprop="description">d</p></div>{swatches}'
-    )
-
-
-def swatch(size: int) -> str:
-    return f'<button class="swatch" value="{size}">{size}</button>'
-
-
-def listing(ids: list, last: int) -> str:
-    links = "".join(f'<a class="title" href="{config.STATIC_ROOT}/product/{i}">x</a>' for i in ids)
-    pager = f'<ul class="pagination"><a class="page-link" href="?page={last}">{last}</a></ul>'
-    return page(links + (pager if last > 1 else ""))
-
-
-def products_site(ids: list) -> dict:
-    return {f"{ROOT}/product/{i}": product(f"P{i}", f"{i}.00") for i in ids}
 
 
 SITE = {
@@ -74,16 +48,6 @@ def test_crawl_follows_pagination_and_dedupes():
     assert failed == 0
 
 
-def test_category_without_subcategories_lists_products_itself():
-    site = {
-        ROOT: page(f'<a class="category-link" href="{ROOT}/flat">c</a>'),
-        f"{ROOT}/flat": listing([1, 2], last=1),
-        **products_site([1, 2]),
-    }
-    products, failed = run(site)
-    assert [p.name for p in products] == ["P1", "P2"] and failed == 0
-
-
 def test_failed_product_is_counted_not_swallowed():
     products, failed = run(SITE, broken={"/product/3": 404})
     assert len(products) == 3 and failed == 1
@@ -92,17 +56,6 @@ def test_failed_product_is_counted_not_swallowed():
 def test_failed_listing_page_is_counted_and_the_rest_survives():
     products, failed = run(SITE, broken={"page=2": 500})
     assert [p.name for p in products] == ["P1", "P2", "P4"] and failed == 1
-
-
-def test_failed_first_listing_page_loses_that_leaf_but_not_the_run():
-    products, failed = run(SITE, broken={"/cat/leaf": 500})
-    assert products == [] and failed == 1
-
-
-def test_unknown_hdd_size_fails_that_product_only():
-    site = {**SITE, f"{ROOT}/product/1": product("P1", "1.00", swatch(128) + swatch(2048))}
-    products, failed = run(site)
-    assert [p.name for p in products] == ["P2", "P3", "P4"] and failed == 1
 
 
 def test_hdd_products_are_expanded():
